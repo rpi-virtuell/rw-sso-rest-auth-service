@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name:      RW SSO REST AUTH SERVICE
+ * Plugin Name:      rw sso REST Auth Service
  * Plugin URI:       https://github.com/rpi-virtuell/rw-sso-rest-auth-service
- * Description:      Authentication tool to compare Wordpress login Data with a Remote Login Server
+ * Description:      Server Authentication tool to compare Wordpress login Data with a Remote Login Server
  * Author:           Daniel Reintanz
  * Version:          1.0.0
  * Licence:          GPLv3
@@ -12,9 +12,6 @@
 
 class SsoRestAuthService
 {
-
-    static private $instance = NULL;
-
     /**
      * Plugin constructor.
      *
@@ -88,4 +85,5 @@ class SsoRestAuthService
         return $response;
     }
 }
+new SsoRestAuthService();
 
