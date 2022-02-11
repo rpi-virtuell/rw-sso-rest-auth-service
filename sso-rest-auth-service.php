@@ -23,9 +23,7 @@ class SsoRestAuthService
     public function __construct()
     {
         add_action('rest_api_init', 'register_SSO_rest_routes');
-        add_action('init', array('SSORESTAuth', 'add_endpoint'), 0);
-        $controller = new SsoRestAuthService();
-        $controller->register_routes();
+        self::register_routes();
     }
 
     /**
