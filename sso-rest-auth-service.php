@@ -22,6 +22,8 @@ class SsoRestAuthService
      */
     public function __construct()
     {
+        if (!defined('ALLOWED_SSO_CLIENTS'))
+            define('ALLOWED_SSO_CLIENTS', array($_SERVER['SERVER_ADDR']));
         add_action('rest_api_init', array($this,'register_routes'));
     }
 
@@ -50,28 +52,33 @@ class SsoRestAuthService
 
     public function handle_request(WP_REST_Request $request)
     {
+        if (!in_array($this->ipAddress(), ALLOWED_SSO_CLIENTS)){
+            $response = new WP_REST_Response();
+            $response->set_status(403);
+            return $response;
+        }
+        $requestObj = $request->get_params();
 
-        $request = $request->get_body();
-        $requestObj = json_decode($request);
         if (null === $requestObj) {
-            $data = array('auth' => array("success" => false));
+            $data = array("success" => false);
         } else {
-            $user = $requestObj->user->id;
-            $mxid = $user;
-            $user = substr($user, 1, strpos($user, ':') - 1);
-            $password = addslashes($requestObj->user->password);
+            $username = $requestObj['username'];
+            $password = $requestObj['password'];
 
-            $LoginUser = wp_authenticate($user, $password);
+            $LoginUser = wp_authenticate($username, $password);
             if (!is_wp_error($LoginUser) && !empty($LoginUser)) {
-                $data = array('auth' => array(
+                $data = array(
                     "success" => true,
-                    "mxid" => $mxid,
                     "profile" => array(
                         "display_name" => $LoginUser->display_name,
+                        'first_name' => $LoginUser->first_name,
+                        'last_name' =>  $LoginUser->last_name,
+                        'user_login' => $LoginUser->user_login,
+                        'user_email' => $LoginUser->user_email
                     ),
-                ));
+                );
             } else {
-                $data = array('auth' => array("success" => false));
+                $data = array("success" => false);
             }
         }
 
@@ -79,6 +86,14 @@ class SsoRestAuthService
 
         $response->set_status(201);
         return $response;
+    }
+    function ipAddress() {
+        if (isset($_SERVER['REMOTE_ADDR'])) :
+            $ip_address = $_SERVER['REMOTE_ADDR'];
+        else :
+            $ip_address = "undefined";
+        endif;
+        return $ip_address;
     }
 }
 new SsoRestAuthService();
