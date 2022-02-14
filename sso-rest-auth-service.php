@@ -22,8 +22,7 @@ class SsoRestAuthService
      */
     public function __construct()
     {
-        add_action('rest_api_init', 'register_SSO_rest_routes');
-        self::register_routes();
+        add_action('rest_api_init', array($this,'register_routes'));
     }
 
     /**
@@ -32,10 +31,9 @@ class SsoRestAuthService
     public function register_routes()
     {
         $version = '1';
-        $namespace = 'sso-/v' . $version;
+        $namespace = 'sso/v' . $version;
         $base = 'check_credentials';
         register_rest_route($namespace, '/' . $base, array(
-            array(
                 'methods' => 'POST',
                 'callback' => array($this, 'handle_request'),
                 'args' => array(
@@ -46,8 +44,8 @@ class SsoRestAuthService
                         'required' => false
                     ),
                 ),
-            ),
-        ));
+            )
+        );
     }
 
     public function handle_request(WP_REST_Request $request)
