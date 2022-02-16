@@ -24,7 +24,7 @@ class SsoRestAuthService
     {
         if (!defined('ALLOWED_SSO_CLIENTS'))
             define('ALLOWED_SSO_CLIENTS', array($_SERVER['SERVER_ADDR']));
-        add_action('rest_api_init', array($this,'register_routes'));
+        add_action('rest_api_init', array($this, 'register_routes'));
     }
 
     /**
@@ -34,10 +34,23 @@ class SsoRestAuthService
     {
         $version = '1';
         $namespace = 'sso/v' . $version;
-        $base = 'check_credentials';
-        register_rest_route($namespace, '/' . $base, array(
+        register_rest_route($namespace, '/' . 'check_credentials', array(
                 'methods' => 'POST',
-                'callback' => array($this, 'handle_request'),
+                'callback' => array($this, 'check_credentials'),
+                'args' => array(
+                    'page' => array(
+                        'required' => false
+                    ),
+                    'per_page' => array(
+                        'required' => false
+                    ),
+                ),
+            )
+        );
+
+        register_rest_route($namespace, '/' . 'get_remote_users', array(
+                'methods' => 'POST',
+                'callback' => array($this, 'get_remote_users'),
                 'args' => array(
                     'page' => array(
                         'required' => false
@@ -50,9 +63,9 @@ class SsoRestAuthService
         );
     }
 
-    public function handle_request(WP_REST_Request $request)
+    public function check_credentials(WP_REST_Request $request)
     {
-        if (!in_array($this->ipAddress(), ALLOWED_SSO_CLIENTS)){
+        if (!in_array($this->ipAddress(), ALLOWED_SSO_CLIENTS)) {
             $response = new WP_REST_Response();
             $response->set_status(403);
             return $response;
@@ -66,16 +79,16 @@ class SsoRestAuthService
             $password = $requestObj['password'];
 
             $LoginUser = wp_authenticate($username, $password);
-            if (!is_wp_error($LoginUser) && !empty($LoginUser)) {
+            if (is_a($LoginUser, 'WP_User')) {
                 $data = array(
                     "success" => true,
                     "profile" => array(
                         "display_name" => $LoginUser->display_name,
                         'first_name' => $LoginUser->first_name,
-                        'last_name' =>  $LoginUser->last_name,
+                        'last_name' => $LoginUser->last_name,
                         'user_login' => $LoginUser->user_login,
                         'user_email' => $LoginUser->user_email
-                    ),
+                    )
                 );
             } else {
                 $data = array("success" => false);
@@ -87,7 +100,50 @@ class SsoRestAuthService
         $response->set_status(201);
         return $response;
     }
-    function ipAddress() {
+
+    public function get_remote_users(WP_REST_Request $request)
+    {
+        $data = array("success" => false);
+        if (!in_array($this->ipAddress(), ALLOWED_SSO_CLIENTS)) {
+            $response = new WP_REST_Response();
+            $response->set_status(403);
+            return $response;
+        }
+        $requestObj = $request->get_params();
+
+        if (null === $requestObj) {
+            $response = new WP_REST_Response();
+            $response->set_status(406);
+            return $response;
+        } else {
+            $searchquery = $requestObj['search_query'];
+            $users = get_users(array('search' => '*' . $searchquery . '*', 'search_columns' => array('user_login', 'user_email')));
+            $userlist = array();
+            foreach ($users as $user) {
+                if (is_a($user, 'WP_User')) {
+
+                    $userlist[] = array(
+                        "display_name" => $user->display_name,
+                        'first_name' => $user->first_name,
+                        'last_name' => $user->last_name,
+                        'user_login' => $user->user_login,
+                        'user_email' => $user->user_email,
+                        'avatar' => get_avatar($user->ID));
+                }
+            }
+            if (count($userlist) > 0) {
+                $data = array("success" => true, "users" => $userlist);
+            }
+        }
+
+        $response = new WP_REST_Response($data);
+
+        $response->set_status(201);
+        return $response;
+    }
+
+    function ipAddress()
+    {
         if (isset($_SERVER['REMOTE_ADDR'])) :
             $ip_address = $_SERVER['REMOTE_ADDR'];
         else :
@@ -96,5 +152,6 @@ class SsoRestAuthService
         return $ip_address;
     }
 }
+
 new SsoRestAuthService();
 
