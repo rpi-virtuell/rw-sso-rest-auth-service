@@ -2,7 +2,7 @@
 /**
  * Plugin Name:      rw sso REST Auth Service
  * Plugin URI:       https://github.com/rpi-virtuell/rw-sso-rest-auth-service
- * Description:      Server Authentication tool to compare Wordpress login Data with a Remote Login Server
+ * Description:      Server Part of Single sign on tool
  * Author:           Daniel Reintanz
  * Version:          1.0.0
  * Licence:          GPLv3
