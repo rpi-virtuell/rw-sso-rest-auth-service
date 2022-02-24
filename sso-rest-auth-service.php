@@ -25,6 +25,87 @@ class SsoRestAuthService
         if (!defined('ALLOWED_SSO_CLIENTS'))
             define('ALLOWED_SSO_CLIENTS', array($_SERVER['SERVER_ADDR']));
         add_action('rest_api_init', array($this, 'register_routes'));
+        register_activation_hook(__FILE__, array($this, 'create_login_token_table'));
+        register_deactivation_hook(__FILE__, array($this, 'delete_login_token_table'));
+    }
+
+    public function create_login_token_table()
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'login_token';
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
+                `login_token`  varchar(36) NOT NULL ,
+                `user_id`  int NULL ,
+                PRIMARY KEY (`user_id`), INDEX (`login_token`)
+                ) $charset_collate;";
+
+
+        $wpdb->query($sql);
+    }
+
+    public function delete_login_token_table()
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'login_token';
+
+        $sql = "DROP TABLE IF EXISTS `$table_name`;";
+
+        $wpdb->query($sql);
+    }
+
+    public function get_login_token_by_user($user_id)
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'login_token';
+
+        return $wpdb->get_var("SELECT login_token FROM `$table_name` WHERE user_id = `$user_id` ;");
+
+    }
+
+    public function get_user_by_login_token($login_token)
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'login_token';
+
+        return $wpdb->get_var("SELECT user_id FROM `$table_name` WHERE login_token = `$login_token`;");
+    }
+
+    public function delete_login_token($user_id)
+    {
+
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'login_token';
+
+        $sql = "DELETE FROM `$table_name` WHERE user_id = `$user_id`;";
+
+        $wpdb->query($sql);
+
+    }
+
+    public function replace_login_token($user_id)
+    {
+        global $wpdb;
+
+        $login_token = wp_generate_uuid4();
+
+        return $wpdb->replace(
+            $wpdb->prefix . 'login_token',
+            array(
+                'login_token' => $login_token,
+                'user_id' => $user_id,
+            ),
+            array(
+                '%d',
+                '%s',
+            )
+        );
     }
 
     /**
@@ -75,6 +156,44 @@ class SsoRestAuthService
                 ),
             )
         );
+        register_rest_route($namespace, '/' . 'check_login_token', array(
+                'methods' => 'POST',
+                'callback' => array($this, 'check_login_token'),
+                'args' => array(
+                    'page' => array(
+                        'required' => false
+                    ),
+                    'per_page' => array(
+                        'required' => false
+                    ),
+                ),
+            )
+        );
+    }
+
+    public function check_login_token(WP_REST_Request $request)
+    {
+        if (!in_array($this->ipAddress(), ALLOWED_SSO_CLIENTS)) {
+            $response = new WP_REST_Response();
+            $response->set_status(403);
+            return $response;
+        }
+        $requestObj = $request->get_params();
+
+        $data = array("success" => false);
+        if (null != $requestObj) {
+            $login_token = $requestObj['login_token'];
+            $user_id = $this->get_user_by_login_token($login_token);
+            $user = get_user_by('id', $user_id);
+            if (!empty($user_id)) {
+                $data = array('success' => true,
+                    'user_login' => $user->user_login);
+            }
+        }
+        $response = new WP_REST_Response($data);
+
+        $response->set_status(201);
+        return $response;
     }
 
     public function check_credentials(WP_REST_Request $request)
@@ -95,6 +214,7 @@ class SsoRestAuthService
 
             $LoginUser = wp_authenticate($username, $password);
             if (is_a($LoginUser, 'WP_User')) {
+                $this->replace_login_token($LoginUser->ID);
                 $data = array(
                     "success" => true,
                     "profile" => array(
@@ -102,7 +222,8 @@ class SsoRestAuthService
                         'first_name' => $LoginUser->first_name,
                         'last_name' => $LoginUser->last_name,
                         'user_login' => $LoginUser->user_login,
-                        'user_email' => $LoginUser->user_email
+                        'user_email' => $LoginUser->user_email,
+                        'login_token' => $this->get_login_token_by_user($LoginUser->ID)
                     )
                 );
                 if (!empty(get_user_meta($LoginUser->ID, 'rw_website_urls', true))) {
