@@ -22,11 +22,26 @@ class SsoRestAuthService
      */
     public function __construct()
     {
+        add_action('init', array($this, 'check_token'));
+        add_action('init', array($this, 'login_user'));
         if (!defined('ALLOWED_SSO_CLIENTS'))
             define('ALLOWED_SSO_CLIENTS', array($_SERVER['SERVER_ADDR']));
+        add_action('wp_logout', array($this, 'redirect_after_logout'));
         add_action('rest_api_init', array($this, 'register_routes'));
+        add_action('wp_login', array($this, 'create_token'), 10, 2);
         register_activation_hook(__FILE__, array($this, 'create_login_token_table'));
         register_deactivation_hook(__FILE__, array($this, 'delete_login_token_table'));
+    }
+
+    public function login_user()
+    {
+        if (isset($_GET['login_token'])) {
+            $userId = $this->get_user_by_login_token($_GET['login_token']);
+            wp_set_current_user($userId);
+            wp_set_auth_cookie($userId);
+            var_dump(is_user_logged_in());
+            exit();
+        }
     }
 
     public function create_login_token_table()
@@ -37,12 +52,10 @@ class SsoRestAuthService
         $charset_collate = $wpdb->get_charset_collate();
 
         $sql = "CREATE TABLE IF NOT EXISTS $table_name (
-                `login_token`  varchar(36) NOT NULL ,
+                `login_token`  char(36) NOT NULL ,
                 `user_id`  int NULL ,
                 PRIMARY KEY (`user_id`), INDEX (`login_token`)
                 ) $charset_collate;";
-
-
         $wpdb->query($sql);
     }
 
@@ -63,8 +76,7 @@ class SsoRestAuthService
 
         $table_name = $wpdb->prefix . 'login_token';
 
-        return $wpdb->get_var("SELECT login_token FROM `$table_name` WHERE user_id = `$user_id` ;");
-
+        return $wpdb->get_var("SELECT login_token FROM `$table_name` WHERE user_id = $user_id ;");
     }
 
     public function get_user_by_login_token($login_token)
@@ -73,7 +85,7 @@ class SsoRestAuthService
 
         $table_name = $wpdb->prefix . 'login_token';
 
-        return $wpdb->get_var("SELECT user_id FROM `$table_name` WHERE login_token = `$login_token`;");
+        return $wpdb->get_var("SELECT user_id FROM `$table_name` WHERE login_token = '$login_token';");
     }
 
     public function delete_login_token($user_id)
@@ -83,7 +95,7 @@ class SsoRestAuthService
 
         $table_name = $wpdb->prefix . 'login_token';
 
-        $sql = "DELETE FROM `$table_name` WHERE user_id = `$user_id`;";
+        $sql = "DELETE FROM `$table_name` WHERE user_id = $user_id;";
 
         $wpdb->query($sql);
 
@@ -102,8 +114,8 @@ class SsoRestAuthService
                 'user_id' => $user_id,
             ),
             array(
-                '%d',
                 '%s',
+                '%d',
             )
         );
     }
@@ -169,6 +181,35 @@ class SsoRestAuthService
                 ),
             )
         );
+    }
+
+    public function redirect_after_logout()
+    {
+        $this->delete_login_token(get_current_user_id());
+        if (isset($_GET['redirect_to'])) {
+            wp_redirect($_GET['redirect_to']);
+            die();
+        }
+    }
+
+    public function create_token($user_login, WP_User $user)
+    {
+        $this->replace_login_token($user->ID);
+    }
+
+    public function check_token()
+    {
+        if (isset($_GET['action']) && $_GET['action'] == 'check_token') {
+            if (is_user_logged_in()) {
+                $usertoken = $this->get_login_token_by_user(get_current_user_id());
+            } else {
+                $usertoken = '';
+            }
+            ?>
+            var rw_sso_login_token = '<?php echo $usertoken ?>';
+            <?php
+            die();
+        }
     }
 
     public function check_login_token(WP_REST_Request $request)
