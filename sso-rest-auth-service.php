@@ -46,6 +46,7 @@ class SsoRestAuthService
                 <div class="notice notice-error is-dismissible">
                     <p><?php _e('WARNING: TABLE '.$table_name. " WAS NOT CREATED! PLEASE REACTIVATE THE PLUGIN : rw sso REST Auth Service "); ?> </p>
                 </div>
+            <?php
         }
 
     }
