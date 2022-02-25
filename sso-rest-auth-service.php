@@ -4,7 +4,7 @@
  * Plugin URI:       https://github.com/rpi-virtuell/rw-sso-rest-auth-service
  * Description:      Server Part of Single sign on tool
  * Author:           Daniel Reintanz
- * Version:          1.0.0
+ * Version:          1.0.1
  * Licence:          GPLv3
  * GitHub Plugin URI: https://github.com/rpi-virtuell/rw-sso-rest-auth-service
  * GitHub Branch:     master
