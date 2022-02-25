@@ -24,13 +24,24 @@ class SsoRestAuthService
     {
         add_action('init', array($this, 'check_token'));
         add_action('init', array($this, 'login_user'));
+        add_action('init', array($this, 'logout_through_remote'));
         if (!defined('ALLOWED_SSO_CLIENTS'))
             define('ALLOWED_SSO_CLIENTS', array($_SERVER['SERVER_ADDR']));
-        add_action('wp_logout', array($this, 'redirect_after_logout'));
-        add_action('rest_api_init', array($this, 'register_routes'));
         add_action('wp_login', array($this, 'create_token'), 10, 2);
+        add_action('rest_api_init', array($this, 'register_routes'));
         register_activation_hook(__FILE__, array($this, 'create_login_token_table'));
         register_deactivation_hook(__FILE__, array($this, 'delete_login_token_table'));
+    }
+
+    public function logout_through_remote()  {
+        if (isset($_GET['action']) && $_GET['action'] == 'remote_logout' && isset($_GET['redirect_to'])){
+            if (is_user_logged_in()) {
+                $this->delete_login_token(get_current_user_id());
+                wp_logout();
+            }
+            wp_redirect($_GET['redirect_to']);
+            die();
+        }
     }
 
     public function login_user()
@@ -181,15 +192,6 @@ class SsoRestAuthService
                 ),
             )
         );
-    }
-
-    public function redirect_after_logout()
-    {
-        $this->delete_login_token(get_current_user_id());
-        if (isset($_GET['redirect_to'])) {
-            wp_redirect($_GET['redirect_to']);
-            die();
-        }
     }
 
     public function create_token($user_login, WP_User $user)
