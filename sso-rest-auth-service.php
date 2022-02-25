@@ -41,7 +41,7 @@ class SsoRestAuthService
 
         $table_name = $wpdb->prefix . 'login_token';
 
-        if (empty($wpdb->get_var("SHOW TABLES LIKE $table_name;"))){
+        if (empty($wpdb->get_var("SHOW TABLES LIKE '$table_name';"))){
             ?>
                 <div class="notice notice-error is-dismissible">
                     <p><?php _e('WARNING: TABLE '.$table_name. " WAS NOT CREATED! PLEASE REACTIVATE THE PLUGIN : rw sso REST Auth Service "); ?> </p>
