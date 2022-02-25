@@ -31,10 +31,28 @@ class SsoRestAuthService
         add_action('rest_api_init', array($this, 'register_routes'));
         register_activation_hook(__FILE__, array($this, 'create_login_token_table'));
         register_deactivation_hook(__FILE__, array($this, 'delete_login_token_table'));
+        add_action('admin_notices', array($this, 'backend_notifier'));
     }
 
-    public function logout_through_remote()  {
-        if (isset($_GET['action']) && $_GET['action'] == 'remote_logout' && isset($_GET['redirect_to'])){
+    public function backend_notifier()
+    {
+
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'login_token';
+
+        if (empty($wpdb->get_var("SHOW TABLES LIKE $table_name;"))){
+            ?>
+                <div class="notice notice-error is-dismissible">
+                    <p><?php _e('WARNING: TABLE '.$table_name. " WAS NOT CREATED! PLEASE REACTIVATE THE PLUGIN : rw sso REST Auth Service "); ?> </p>
+                </div>
+        }
+
+    }
+
+    public function logout_through_remote()
+    {
+        if (isset($_GET['action']) && $_GET['action'] == 'remote_logout' && isset($_GET['redirect_to'])) {
             if (is_user_logged_in()) {
                 $this->delete_login_token(get_current_user_id());
                 wp_logout();
