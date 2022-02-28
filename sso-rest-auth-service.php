@@ -15,7 +15,7 @@ class SsoRestAuthService
     /**
      * Plugin constructor.
      *
-     * @since   0.1
+     * @since   1.0
      * @access  public
      * @uses    plugin_basename
      * @action  rw_remote_auth_server_init
@@ -34,6 +34,12 @@ class SsoRestAuthService
         add_action('admin_notices', array($this, 'backend_notifier'));
     }
 
+    /**
+     * Sends a backend notification which checks if the table login_token is present and notifies the user if it isn't
+     * @since 1.0.1
+     * @access public
+     * @action admin_notices
+     */
     public function backend_notifier()
     {
 
@@ -51,6 +57,13 @@ class SsoRestAuthService
 
     }
 
+
+    /**
+     * Triggers a logout if this link attributes are passed and redirects to given link afterwards
+     * @since 1.0.1
+     * @access public
+     * @action init
+     */
     public function logout_through_remote()
     {
         if (isset($_GET['action']) && $_GET['action'] == 'remote_logout' && isset($_GET['redirect_to'])) {
@@ -63,17 +76,28 @@ class SsoRestAuthService
         }
     }
 
+    /**
+     * Login via login token which is compared to token saved in database
+     * @since 1.0.1
+     * @access public
+     * @action init
+     */
     public function login_user()
     {
         if (isset($_GET['login_token'])) {
             $userId = $this->get_user_by_login_token($_GET['login_token']);
             wp_set_current_user($userId);
             wp_set_auth_cookie($userId);
-            var_dump(is_user_logged_in());
             exit();
         }
     }
 
+    /**
+     * Create login_token table on plugin activation
+     * @since 1.0.1
+     * @access public
+     * @action activation_hook
+     */
     public function create_login_token_table()
     {
         global $wpdb;
@@ -89,6 +113,12 @@ class SsoRestAuthService
         $wpdb->query($sql);
     }
 
+    /**
+     * Delete login_token table on plugin deactivation
+     * @since 1.0.1
+     * @access public
+     * @action deactivation_hook
+     */
     public function delete_login_token_table()
     {
         global $wpdb;
@@ -100,6 +130,13 @@ class SsoRestAuthService
         $wpdb->query($sql);
     }
 
+    /**
+     * Gets the login_token by the user_id via database query
+     * @since 1.0.1
+     * @access public
+     * @param $user_id
+     * @return string|null
+     */
     public function get_login_token_by_user($user_id)
     {
         global $wpdb;
@@ -109,6 +146,13 @@ class SsoRestAuthService
         return $wpdb->get_var("SELECT login_token FROM `$table_name` WHERE user_id = $user_id ;");
     }
 
+    /**
+     * Gets the user_id by the login_token via database query
+     * @since  1.0.1
+     * @access public
+     * @param $login_token
+     * @return string|null
+     */
     public function get_user_by_login_token($login_token)
     {
         global $wpdb;
@@ -118,6 +162,13 @@ class SsoRestAuthService
         return $wpdb->get_var("SELECT user_id FROM `$table_name` WHERE login_token = '$login_token';");
     }
 
+    /**
+     * Delete the login_token by passed user_id via database query
+     * @since 1.0.1
+     * @access public
+     * @param $user_id
+     * @return bool|int
+     */
     public function delete_login_token($user_id)
     {
 
@@ -127,10 +178,17 @@ class SsoRestAuthService
 
         $sql = "DELETE FROM `$table_name` WHERE user_id = $user_id;";
 
-        $wpdb->query($sql);
+        return $wpdb->query($sql);
 
     }
 
+    /**
+     * Replace the login_token connected to the given user_id
+     * @since 1.0.1
+     * @access public
+     * @param $user_id
+     * @return bool|int
+     */
     public function replace_login_token($user_id)
     {
         global $wpdb;
@@ -151,7 +209,11 @@ class SsoRestAuthService
     }
 
     /**
-     * Register the routes for the objects of the controller.
+     * Register the routes used by the methods of the client plugin
+     * @since 1.0
+     * @access public
+     * @action rest_api_init
+     *
      */
     public function register_routes()
     {
@@ -213,6 +275,14 @@ class SsoRestAuthService
         );
     }
 
+    /**
+     * Create a new login token
+     * @action wp_login
+     * @since 1.0.1
+     * @access public
+     * @param $user_login
+     * @param WP_User $user
+     */
     public function create_token($user_login, WP_User $user)
     {
         $this->replace_login_token($user->ID);
@@ -233,6 +303,13 @@ class SsoRestAuthService
         }
     }
 
+    /**
+     * REST route logic which checks if the sent user_token is present in the database
+     * @since 1.0.1
+     * @access public
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response
+     */
     public function check_login_token(WP_REST_Request $request)
     {
         if (!in_array($this->ipAddress(), ALLOWED_SSO_CLIENTS)) {
@@ -258,6 +335,13 @@ class SsoRestAuthService
         return $response;
     }
 
+    /**
+     * REST route logic which checks the login credentials passed by POST
+     * @since 1.0.1
+     * @access public
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response
+     */
     public function check_credentials(WP_REST_Request $request)
     {
         if (!in_array($this->ipAddress(), ALLOWED_SSO_CLIENTS)) {
@@ -309,6 +393,13 @@ class SsoRestAuthService
         return $response;
     }
 
+    /**
+     * REST route logic which gets user data by user login
+     * @since 1.0
+     * @access public
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response
+     */
     public function get_remote_user(WP_REST_Request $request)
     {
         $data = array("success" => false);
@@ -345,6 +436,13 @@ class SsoRestAuthService
         return $response;
     }
 
+    /**
+     * REST route logic which gets the data of multiple users by user login
+     * @since 1.0
+     * @access public
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response
+     */
     public function get_remote_users(WP_REST_Request $request)
     {
         $data = array("success" => false);
@@ -385,6 +483,11 @@ class SsoRestAuthService
         return $response;
     }
 
+    /**
+     * get whitelisted IPs
+     * @since 1.0
+     * @return mixed|string
+     */
     function ipAddress()
     {
         if (isset($_SERVER['REMOTE_ADDR'])) :
