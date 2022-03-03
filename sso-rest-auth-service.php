@@ -47,11 +47,11 @@ class SsoRestAuthService
 
         $table_name = $wpdb->prefix . 'login_token';
 
-        if (empty($wpdb->get_var("SHOW TABLES LIKE '$table_name';"))){
+        if (empty($wpdb->get_var("SHOW TABLES LIKE '$table_name';"))) {
             ?>
-                <div class="notice notice-error is-dismissible">
-                    <p><?php _e('WARNING: TABLE '.$table_name. " WAS NOT CREATED! PLEASE REACTIVATE THE PLUGIN : rw sso REST Auth Service "); ?> </p>
-                </div>
+            <div class="notice notice-error is-dismissible">
+                <p><?php _e('WARNING: TABLE ' . $table_name . " WAS NOT CREATED! PLEASE REACTIVATE THE PLUGIN : rw sso REST Auth Service "); ?> </p>
+            </div>
             <?php
         }
 
@@ -132,10 +132,10 @@ class SsoRestAuthService
 
     /**
      * Gets the login_token by the user_id via database query
-     * @since 1.0.1
-     * @access public
      * @param $user_id
      * @return string|null
+     * @since 1.0.1
+     * @access public
      */
     public function get_login_token_by_user($user_id)
     {
@@ -148,10 +148,10 @@ class SsoRestAuthService
 
     /**
      * Gets the user_id by the login_token via database query
-     * @since  1.0.1
-     * @access public
      * @param $login_token
      * @return string|null
+     * @since  1.0.1
+     * @access public
      */
     public function get_user_by_login_token($login_token)
     {
@@ -164,10 +164,10 @@ class SsoRestAuthService
 
     /**
      * Delete the login_token by passed user_id via database query
-     * @since 1.0.1
-     * @access public
      * @param $user_id
      * @return bool|int
+     * @since 1.0.1
+     * @access public
      */
     public function delete_login_token($user_id)
     {
@@ -184,10 +184,10 @@ class SsoRestAuthService
 
     /**
      * Replace the login_token connected to the given user_id
-     * @since 1.0.1
-     * @access public
      * @param $user_id
      * @return bool|int
+     * @since 1.0.1
+     * @access public
      */
     public function replace_login_token($user_id)
     {
@@ -278,10 +278,10 @@ class SsoRestAuthService
     /**
      * Create a new login token
      * @action wp_login
-     * @since 1.0.1
-     * @access public
      * @param $user_login
      * @param WP_User $user
+     * @since 1.0.1
+     * @access public
      */
     public function create_token($user_login, WP_User $user)
     {
@@ -305,10 +305,10 @@ class SsoRestAuthService
 
     /**
      * REST route logic which checks if the sent user_token is present in the database
-     * @since 1.0.1
-     * @access public
      * @param WP_REST_Request $request
      * @return WP_REST_Response
+     * @since 1.0.1
+     * @access public
      */
     public function check_login_token(WP_REST_Request $request)
     {
@@ -337,10 +337,10 @@ class SsoRestAuthService
 
     /**
      * REST route logic which checks the login credentials passed by POST
-     * @since 1.0.1
-     * @access public
      * @param WP_REST_Request $request
      * @return WP_REST_Response
+     * @since 1.0.1
+     * @access public
      */
     public function check_credentials(WP_REST_Request $request)
     {
@@ -354,6 +354,14 @@ class SsoRestAuthService
         if (null === $requestObj) {
             $data = array("success" => false);
         } else {
+            //convert moodle curl request to array
+            if (isset($requestObj[0]) && is_a(json_decode($requestObj[0]), 'stdClass')) {
+                $Obj = json_decode($requestObj[0]);
+                $requestObj['username'] = $Obj->username;
+                $requestObj['password'] = $Obj->password;
+                $requestObj['origin_url'] = $Obj->origin;
+            }
+
             $username = $requestObj['username'];
             $password = $requestObj['password'];
             $origin_url = $requestObj['origin_url'];
@@ -395,10 +403,10 @@ class SsoRestAuthService
 
     /**
      * REST route logic which gets user data by user login
-     * @since 1.0
-     * @access public
      * @param WP_REST_Request $request
      * @return WP_REST_Response
+     * @since 1.0
+     * @access public
      */
     public function get_remote_user(WP_REST_Request $request)
     {
@@ -438,10 +446,10 @@ class SsoRestAuthService
 
     /**
      * REST route logic which gets the data of multiple users by user login
-     * @since 1.0
-     * @access public
      * @param WP_REST_Request $request
      * @return WP_REST_Response
+     * @since 1.0
+     * @access public
      */
     public function get_remote_users(WP_REST_Request $request)
     {
@@ -485,8 +493,8 @@ class SsoRestAuthService
 
     /**
      * get whitelisted IPs
-     * @since 1.0
      * @return mixed|string
+     * @since 1.0
      */
     function ipAddress()
     {
