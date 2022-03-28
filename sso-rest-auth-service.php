@@ -4,7 +4,7 @@
  * Plugin URI:       https://github.com/rpi-virtuell/rw-sso-rest-auth-service
  * Description:      Server Part of Single sign on tool
  * Author:           Daniel Reintanz
- * Version:          1.0.1
+ * Version:          1.1.0
  * Licence:          GPLv3
  * GitHub Plugin URI: https://github.com/rpi-virtuell/rw-sso-rest-auth-service
  * GitHub Branch:     master
@@ -344,15 +344,23 @@ class SsoRestAuthService
      */
     public function check_credentials(WP_REST_Request $request)
     {
+        $response = new WP_REST_Response();
+
         if (!in_array($this->ipAddress(), ALLOWED_SSO_CLIENTS)) {
-            $response = new WP_REST_Response();
+            $data = array(
+                "success" => false,
+                "error_message" => "Acces Denied! Client Server not authorized.");
             $response->set_status(403);
-            return $response;
+            $response->set_data($data);
+                return $response;
         }
         $requestObj = $request->get_params();
 
         if (null === $requestObj) {
-            $data = array("success" => false);
+            $data = array(
+                "success" => false,
+                "error_message" => "REST Call Error! Required Data could not be found in passed call body.");
+            $response->set_status(404);
         } else {
             //convert moodle curl request to array
             if (isset($requestObj[0]) && is_a(json_decode($requestObj[0]), 'stdClass')) {
@@ -390,14 +398,18 @@ class SsoRestAuthService
                 array_push($website_urls, $origin_url);
                 $website_urls = array_unique($website_urls);
                 update_user_meta($LoginUser->ID, 'rw_website_urls', $website_urls);
+                $response->set_status(201);
             } else {
-                $data = array("success" => false);
+                $data = array(
+                    "success" => false,
+                    "error" => "Authentication Error!",
+                    "error_message" => $LoginUser->errors);
+
+                $response->set_status(404);
+
             }
         }
-
-        $response = new WP_REST_Response($data);
-
-        $response->set_status(201);
+        $response->set_data($data);
         return $response;
     }
 
